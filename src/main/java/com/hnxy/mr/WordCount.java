@@ -24,7 +24,7 @@ public class WordCount extends Configured implements Tool {
     private static class MyMapper extends Mapper<LongWritable, Text, Text, IntWritable> {
         //key——一行数据偏移量//
         // value——一行数据
-        // contex——从map到reduce的上下文对象
+        // context——从map到reduce的上下文对象
         @Override
         protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             super.map(key, value, context);
