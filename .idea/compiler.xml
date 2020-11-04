@@ -6,11 +6,11 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="hadoop_mapredure" />
+        <module name="mapredure" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
-      <module name="hadoop_mapredure" target="1.8" />
+      <module name="mapredure" target="1.8" />
     </bytecodeTargetLevel>
   </component>
 </project>
