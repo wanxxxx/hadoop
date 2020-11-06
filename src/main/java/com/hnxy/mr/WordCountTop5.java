@@ -1,6 +1,5 @@
 package com.hnxy.mr;
 
-import org.apache.commons.collections.IteratorUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -17,10 +16,12 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import java.io.IOException;
-import java.lang.reflect.Array;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
 
-public class WordCount extends Configured implements Tool {
+public class WordCountTop5 extends Configured implements Tool {
 
     /*********************先配置**********************/
     //1.配置自己的map
@@ -31,23 +32,21 @@ public class WordCount extends Configured implements Tool {
          * 内存的使用是编写MapReduce程序时唯一要关心的问题，一定要严格控制内存使用*/
         private Text outkey = new Text();
         private IntWritable outval = new IntWritable();
-        private String tmpvalue = null;
         private String[] tmp = null;
 
         //key——一行数据偏移量//
         //value——一行数据
         //context——从map到reduce的上下文对象*/
         @Override
-        protected void map(LongWritable key, Text value, Mapper<LongWritable, Text, Text, IntWritable>.Context context) throws IOException, InterruptedException {
+        protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             //拆分value
             //若文件为GBK编码，通过以下方法处理不会乱码（因为mr默认是UTF-8编码）
-            tmpvalue = new String(value.getBytes(), 0, value.getLength(), "GBK");
 
-            tmp = tmpvalue.toString().split("\t| ");
+            tmp = value.toString().split("\t| ");
 
             context.getCounter("line_info", "total_line").increment(1L);
             //拆分有效
-            if (tmp != null && tmp.length > 0 && Arrays.toString(tmp).replace("[", "").replace("]", "").length() > 0) {
+            if (tmp != null && tmp.length > 0 && Arrays.toString(tmp).replace("[","").replace("]","").length() > 0) {
                 context.getCounter("line_info", "right_line").increment(1L);
                 for (String s : tmp) {
                     outkey.set(s);
@@ -61,7 +60,6 @@ public class WordCount extends Configured implements Tool {
 
         }
 
-
     }
 
     //2.配置自己的reduce
@@ -71,11 +69,10 @@ public class WordCount extends Configured implements Tool {
         private LongWritable outval = new LongWritable();
         private Long tmp = 0L;
 
-        Map<String, Long> map = new HashMap<>();
 
         @Override
         protected void reduce(Text key, Iterable<IntWritable> values,
-                              Reducer<Text, IntWritable, Text, LongWritable>.Context context) throws IOException, InterruptedException {
+                              Context context) throws IOException, InterruptedException {
 
             // 清空前一次的累加记录
             tmp = 0L;
@@ -86,16 +83,9 @@ public class WordCount extends Configured implements Tool {
             // 进行输出设置
             outval.set(tmp);
             context.write(key, outval);
-            map.put(key.toString(),tmp);
-        }
-
-        @Override
-        protected void cleanup(Reducer<Text, IntWritable, Text, LongWritable>.Context context) throws IOException, InterruptedException {
-        //给map排序
-
+            System.out.println("key :" + key + "; values :" + tmp);
         }
     }
-
 
     //3.配置job
     public int run(String[] args) throws Exception {
@@ -121,7 +111,7 @@ public class WordCount extends Configured implements Tool {
         job.setReducerClass(MyReducer.class);
 
         //设置要打包的主class （MapReduce所在内部类的容器container类——WordCount）
-        job.setJarByClass(WordCount.class);
+        job.setJarByClass(WordCountTop5.class);
 
         //设置Map和Reduce类的输出类型（若相等则只设置Map类即可）
         //Map类输出（Reduce输入类型与之相等）
@@ -140,21 +130,7 @@ public class WordCount extends Configured implements Tool {
         Counters counters = job.getCounters();
         //获取想要的组
         CounterGroup counterGroup = counters.getGroup("line_info");
-        //通过list存储key val
-        List key = new ArrayList();
-        List val = new ArrayList();
-        List tt = new ArrayList();
-        for (Counter tmp :
-                counterGroup) {
-            key.add(tmp.getDisplayName());
-            val.add(tmp.getValue());
-            tt.add(tmp.getName());
-            tt.add(tmp.getValue());
-        }
-        System.out.println(tt.toString());
-        System.out.println(counterGroup.findCounter("error_line").getDisplayName() + "   " +
-                counterGroup.findCounter("error_line").getValue()
-        );
+
         /*-------------------------------------*/
         //返回值
 
@@ -167,7 +143,7 @@ public class WordCount extends Configured implements Tool {
     public static void main(String[] args) {
         try {
             Date start = new Date();
-            int result = ToolRunner.run(new WordCount(), args);
+            int result = ToolRunner.run(new WordCountTop5(), args);
             Date end = new Date();
             String msg = result == 1 ? "Job OK" : "JOB FAIL";
             System.out.println("Time spent " + (end.getTime() - start.getTime()) + " ms");
