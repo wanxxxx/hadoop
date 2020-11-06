@@ -70,9 +70,7 @@ public class MyDistinct extends Configured implements Tool {
 	// JOB --> job配置
 	public int run(String[] args) throws Exception {
 		
-		// 设定方法的返回值
-		int count = -1;
-		
+
 		// 组织自己的job
 		Configuration conf = this.getConf();
 		Job job = Job.getInstance(conf, "wordcount");
@@ -104,8 +102,10 @@ public class MyDistinct extends Configured implements Tool {
 		// 4. 本次job的输入与输出位置
 		FileInputFormat.addInputPath(job, new Path(args[0]));
 		FileOutputFormat.setOutputPath(job, op);
+		job.setNumReduceTasks(1);
+
 		// 运行这个任务 1 成功 0 失败
-		count = job.waitForCompletion(true)?1:0; // 一致等待这个任务完成再返回结果
+		int count = job.waitForCompletion(true)?1:0; // 一致等待这个任务完成再返回结果
 		// 返回
 		return count;
 	}

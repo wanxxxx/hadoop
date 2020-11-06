@@ -19,6 +19,17 @@
 			<artifactId>hadoop-client</artifactId>
 			<version>2.7.3</version>
 		</dependency>
+		<dependency>
+			<groupId>com.alibaba</groupId>
+			<artifactId>fastjson</artifactId>
+			<version>1.2.74</version>
+		</dependency>
+		<!--groovy -->
+		<dependency>
+			<groupId>org.codehaus.groovy</groupId>
+			<artifactId>groovy-all</artifactId>
+			<version>2.4.8</version>
+		</dependency>
 	</dependencies>
 
 </project>

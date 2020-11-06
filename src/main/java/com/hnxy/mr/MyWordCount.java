@@ -70,7 +70,7 @@ public class MyWordCount extends Configured implements Tool {
 		protected void reduce(Text key, Iterable<IntWritable> values,
 				Reducer<Text, IntWritable, Text, LongWritable>.Context context) throws IOException, InterruptedException {
 			// 清空前一次的累加记录
-			tmp = 0L;
+            tmp = 0L;
 			// 循环当前的数据
 			for (IntWritable i : values) {
 				tmp+=i.get();
@@ -78,6 +78,7 @@ public class MyWordCount extends Configured implements Tool {
 			// 进行输出设置
 			outval.set(tmp);
 			context.write(key, outval);
+			System.out.println("key :" + key + "; values :" + tmp);
 		}
 	}
 	
@@ -85,8 +86,7 @@ public class MyWordCount extends Configured implements Tool {
 	// JOB --> job配置
 	public int run(String[] args) throws Exception {
 		
-		// 设定方法的返回值
-		int count = -1;
+
 		
 		// 组织自己的job
 		Configuration conf = this.getConf();
@@ -122,8 +122,9 @@ public class MyWordCount extends Configured implements Tool {
 		// 4. 本次job的输入与输出位置
 		FileInputFormat.addInputPath(job, new Path(args[0]));
 		FileOutputFormat.setOutputPath(job, op);
+
 		// 运行这个任务 1 成功 0 失败
-		count = job.waitForCompletion(true)?1:0; // 一致等待这个任务完成再返回结果
+		int count = job.waitForCompletion(true)?1:0; // 一致等待这个任务完成再返回结果
 		// 返回
 		return count;
 	}

@@ -3,7 +3,7 @@
 <configuration>
 	<property>
 		<name>mapreduce.job.reduces</name>
-		<value>5</value>
+		<value>7</value>
 		<description>reduce的数量</description>
 	</property>
 </configuration>
