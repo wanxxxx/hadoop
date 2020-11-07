@@ -1,4 +1,4 @@
-package com.hnxy.mr;
+package com.fangxi.hadoop;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -18,11 +18,8 @@ import org.apache.hadoop.util.ToolRunner;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.regex.Pattern;
 
-import static java.lang.Integer.parseInt;
-
-public class Census extends Configured implements Tool {
+public class WordCount_Combiner extends Configured implements Tool {
 
     /*********************先配置**********************/
     //1.配置自己的map
@@ -45,25 +42,45 @@ public class Census extends Configured implements Tool {
             //若文件为GBK编码，通过以下方法处理不会乱码（因为mr默认是UTF-8编码）
             tmpvalue = new String(value.getBytes(), 0, value.getLength(), "GBK");
 
-            tmp = tmpvalue.split(" ");
-            /*判断第一列是否为数字*/
-            Pattern pattern = Pattern.compile("[0-9]*");
-            /*判断第2 3 列是否为汉字*/
-            String reg = "[\\u4e00-\\u9fa5]+";
+            tmp = tmpvalue.split("\t| ");
 
+            context.getCounter("line_info", "total_line").increment(1L);
             //拆分有效
-            if (tmp != null && tmp.length == 3
-                    && pattern.matcher(tmp[0]).matches()/*判断第一列是否为数字*/
-                    && tmp[1].matches(reg) && tmp[2].matches(reg)/*判断第2 3 列是否为汉字*/
-                    && tmp[2].substring(tmp[2].length() - 1).equals("市")/*判断第三列是否为xx市*/
-                    && Arrays.toString(tmp).replace("[", "").replace("]", "").length() > 0) {
-                context.getCounter("居民信息", tmp[2]).increment(1L);
-                outkey.set(tmp[2]);
-                int a = Integer.valueOf(tmp[0].replace("[", "").replace("]", ""));
-                outval.set(a);
-                context.write(outkey, outval);
+            if (tmp != null && tmp.length > 0 && Arrays.toString(tmp).replace("[", "").replace("]", "").length() > 0) {
+                context.getCounter("line_info", "right_line").increment(1L);
+                for (String s : tmp) {
+                    outkey.set(s);
+                    outval.set(1);
+                    context.write(outkey, outval);
+                }
+            } else {
+                context.getCounter("line_info", "error_line").increment(1L);
             }
 
+
+        }
+
+
+    }
+    //Combiner
+
+    private static class MyCombiner extends Reducer<Text, IntWritable, Text, IntWritable> {
+        private IntWritable outval = new IntWritable();
+        private Integer tmp = 0;
+
+        @Override
+        protected void reduce(Text key, Iterable<IntWritable> values,
+                              Context context) throws IOException, InterruptedException {
+
+            // 清空前一次的累加记录
+            tmp = 0;
+            // 循环当前的数据
+            for (IntWritable i : values) {
+                tmp += i.get();
+            }
+            // 进行输出设置
+            outval.set(tmp);
+            context.write(key, outval);
         }
 
     }
@@ -71,29 +88,37 @@ public class Census extends Configured implements Tool {
     //2.配置自己的reduce
     /*输入：map的输出*/
     /*输出：合并后的数量可能很大，所以用Long类型*/
-    private static class MyReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
-        private IntWritable outval = new IntWritable();
-
+    private static class MyReducer extends Reducer<Text, IntWritable, Text, LongWritable> {
+        private LongWritable outval = new LongWritable();
+        private Long tmp = 0L;
 
         @Override
         protected void reduce(Text key, Iterable<IntWritable> values,
                               Context context) throws IOException, InterruptedException {
 
-            context.write(key, outval);
-            System.out.print("户籍为" + key + "的居民编号有：");
+            /*System.out.printf(key + " :"  );
+            values.iterator().forEachRemaining(e -> System.out.printf(e+" "));
+            System.out.println();*/
+            // 清空前一次的累加记录
+            tmp = 0L;
+            // 循环当前的数据
             for (IntWritable i : values) {
-                System.out.print(i.get() + " ");
+                tmp += i.get();
             }
-            System.out.println();
-
+            // 进行输出设置
+            outval.set(tmp);
+            context.write(key, outval);
         }
+
     }
+
 
     //3.配置job
     public int run(String[] args) throws Exception {
         int count = -1;
         Configuration conf = this.getConf();
-        Job job = Job.getInstance(conf, "census");
+        Job job = Job.getInstance(conf, "wc2");
+
         //设置输入输出目录
         Path in = new Path(args[0]);
         Path out = new Path(args[1]);
@@ -110,24 +135,26 @@ public class Census extends Configured implements Tool {
 
         //设置MR类
         job.setMapperClass(MyMapper.class);
+        job.setCombinerClass(MyCombiner.class);
         job.setReducerClass(MyReducer.class);
 
         //设置要打包的主class （MapReduce所在内部类的容器container类——WordCount）
-        job.setJarByClass(Census.class);
+        job.setJarByClass(WordCount_Combiner.class);
 
         //设置Map和Reduce类的输出类型（若相等则只设置Map类即可）
         //Map类输出（Reduce输入类型与之相等）
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(IntWritable.class);
-
+        //Reduce类输出
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(LongWritable.class);
 
         //设置输入输出数据的“格式化”类型
         job.setInputFormatClass(TextInputFormat.class);
         job.setOutputFormatClass(TextOutputFormat.class);
         count = job.waitForCompletion(true) ? 1 : 0;
         /*----------------可选：获取counters-------------*/
-        Common.getCountOut(job);
-        /*-------------------------------------*/
+
         //返回值
 
         return count;
@@ -139,7 +166,7 @@ public class Census extends Configured implements Tool {
     public static void main(String[] args) {
         try {
             Date start = new Date();
-            int result = ToolRunner.run(new Census(), args);
+            int result = ToolRunner.run(new WordCount_Combiner(), args);
             Common.setResult(start, result);
         } catch (Exception e) {
             e.printStackTrace();

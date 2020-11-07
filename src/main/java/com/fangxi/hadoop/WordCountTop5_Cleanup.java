@@ -1,6 +1,5 @@
-package com.hnxy.mr;
+package com.fangxi.hadoop;
 
-import org.apache.commons.collections.IteratorUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -17,10 +16,9 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Date;
+import java.util.*;
 
-public class WordCount_Combiner extends Configured implements Tool {
+public class WordCountTop5_Cleanup extends Configured implements Tool {
 
     /*********************先配置**********************/
     //1.配置自己的map
@@ -31,7 +29,6 @@ public class WordCount_Combiner extends Configured implements Tool {
          * 内存的使用是编写MapReduce程序时唯一要关心的问题，一定要严格控制内存使用*/
         private Text outkey = new Text();
         private IntWritable outval = new IntWritable();
-        private String tmpvalue = null;
         private String[] tmp = null;
 
         //key——一行数据偏移量//
@@ -41,9 +38,8 @@ public class WordCount_Combiner extends Configured implements Tool {
         protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             //拆分value
             //若文件为GBK编码，通过以下方法处理不会乱码（因为mr默认是UTF-8编码）
-            tmpvalue = new String(value.getBytes(), 0, value.getLength(), "GBK");
 
-            tmp = tmpvalue.split("\t| ");
+            tmp = value.toString().split("\t| ");
 
             context.getCounter("line_info", "total_line").increment(1L);
             //拆分有效
@@ -61,29 +57,6 @@ public class WordCount_Combiner extends Configured implements Tool {
 
         }
 
-
-    }
-    //Combiner
-
-    private static class MyCombiner extends Reducer<Text, IntWritable, Text, IntWritable> {
-        private IntWritable outval = new IntWritable();
-        private Integer tmp = 0;
-
-        @Override
-        protected void reduce(Text key, Iterable<IntWritable> values,
-                              Context context) throws IOException, InterruptedException {
-
-            // 清空前一次的累加记录
-            tmp = 0;
-            // 循环当前的数据
-            for (IntWritable i : values) {
-                tmp += i.get();
-            }
-            // 进行输出设置
-            outval.set(tmp);
-            context.write(key, outval);
-        }
-
     }
 
     //2.配置自己的reduce
@@ -91,35 +64,46 @@ public class WordCount_Combiner extends Configured implements Tool {
     /*输出：合并后的数量可能很大，所以用Long类型*/
     private static class MyReducer extends Reducer<Text, IntWritable, Text, LongWritable> {
         private LongWritable outval = new LongWritable();
+        private Text outkey = new Text();
         private Long tmp = 0L;
+        Map<String, Long> wcmap = new HashMap<>();
 
         @Override
         protected void reduce(Text key, Iterable<IntWritable> values,
-                              Context context) throws IOException, InterruptedException {
+                              Context context)  {
 
-            /*System.out.printf(key + " :"  );
-            values.iterator().forEachRemaining(e -> System.out.printf(e+" "));
-            System.out.println();*/
             // 清空前一次的累加记录
             tmp = 0L;
             // 循环当前的数据
             for (IntWritable i : values) {
                 tmp += i.get();
             }
-            // 进行输出设置
-            outval.set(tmp);
-            context.write(key, outval);
+            wcmap.put(key.toString(),tmp);
         }
 
-    }
+        @Override
+        protected void cleanup(Context context) throws IOException, InterruptedException {
+            //给map排序
 
+            LinkedList<Map.Entry<String, Long>> list = new LinkedList<>(wcmap.entrySet());
+            Collections.sort(list, (o1, o2) -> o2.getValue().compareTo(o1.getValue()));
+
+            //输出前几位
+
+            for (int i = 0; i < 5; i++) {
+                outkey.set(list.get(i).getKey());
+                outval.set(list.get(i).getValue());
+                System.out.println(outkey.toString()+"   "+outval);
+                context.write(outkey, outval);
+            }
+        }
+    }
 
     //3.配置job
     public int run(String[] args) throws Exception {
         int count = -1;
         Configuration conf = this.getConf();
-        Job job = Job.getInstance(conf, "wc2");
-
+        Job job = Job.getInstance(conf, "wc");
         //设置输入输出目录
         Path in = new Path(args[0]);
         Path out = new Path(args[1]);
@@ -136,11 +120,10 @@ public class WordCount_Combiner extends Configured implements Tool {
 
         //设置MR类
         job.setMapperClass(MyMapper.class);
-        job.setCombinerClass(MyCombiner.class);
         job.setReducerClass(MyReducer.class);
 
         //设置要打包的主class （MapReduce所在内部类的容器container类——WordCount）
-        job.setJarByClass(WordCount_Combiner.class);
+        job.setJarByClass(WordCountTop5_Cleanup.class);
 
         //设置Map和Reduce类的输出类型（若相等则只设置Map类即可）
         //Map类输出（Reduce输入类型与之相等）
@@ -155,7 +138,12 @@ public class WordCount_Combiner extends Configured implements Tool {
         job.setOutputFormatClass(TextOutputFormat.class);
         count = job.waitForCompletion(true) ? 1 : 0;
         /*----------------可选：获取counters-------------*/
+        //获取counters
+        Counters counters = job.getCounters();
+        //获取想要的组
+        CounterGroup counterGroup = counters.getGroup("line_info");
 
+        /*-------------------------------------*/
         //返回值
 
         return count;
@@ -167,10 +155,12 @@ public class WordCount_Combiner extends Configured implements Tool {
     public static void main(String[] args) {
         try {
             Date start = new Date();
-            int result = ToolRunner.run(new WordCount_Combiner(), args);
+            int result = ToolRunner.run(new WordCountTop5_Cleanup(), args);
             Common.setResult(start, result);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
+
 }

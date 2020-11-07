@@ -1,4 +1,4 @@
-package com.hnxy.mr;
+package com.fangxi.hadoop;
 
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.CounterGroup;

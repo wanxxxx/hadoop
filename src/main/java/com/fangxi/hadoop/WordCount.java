@@ -1,4 +1,4 @@
-package com.hnxy.mr;
+package com.fangxi.hadoop;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;

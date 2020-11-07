@@ -1,4 +1,4 @@
-package com.hnxy.mr;
+package com.fangxi.hadoop;
 
 import java.io.FileInputStream;
 import java.io.IOException;

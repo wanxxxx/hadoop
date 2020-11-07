@@ -1,4 +1,4 @@
-package com.hnxy.mr;
+package com.fangxi.hadoop;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -7,7 +7,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.io.compress.GzipCodec;
+import org.apache.hadoop.io.compress.SnappyCodec;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -16,9 +21,10 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Date;
 
-public class WordCountTop5_Cleanup extends Configured implements Tool {
+public class Compress extends Configured implements Tool {
 
     /*********************先配置**********************/
     //1.配置自己的map
@@ -29,6 +35,7 @@ public class WordCountTop5_Cleanup extends Configured implements Tool {
          * 内存的使用是编写MapReduce程序时唯一要关心的问题，一定要严格控制内存使用*/
         private Text outkey = new Text();
         private IntWritable outval = new IntWritable();
+        private String tmpvalue = null;
         private String[] tmp = null;
 
         //key——一行数据偏移量//
@@ -38,8 +45,9 @@ public class WordCountTop5_Cleanup extends Configured implements Tool {
         protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             //拆分value
             //若文件为GBK编码，通过以下方法处理不会乱码（因为mr默认是UTF-8编码）
+            tmpvalue = new String(value.getBytes(), 0, value.getLength(), "GBK");
 
-            tmp = value.toString().split("\t| ");
+            tmp = tmpvalue.split("\t| ");
 
             context.getCounter("line_info", "total_line").increment(1L);
             //拆分有效
@@ -57,6 +65,7 @@ public class WordCountTop5_Cleanup extends Configured implements Tool {
 
         }
 
+
     }
 
     //2.配置自己的reduce
@@ -64,13 +73,11 @@ public class WordCountTop5_Cleanup extends Configured implements Tool {
     /*输出：合并后的数量可能很大，所以用Long类型*/
     private static class MyReducer extends Reducer<Text, IntWritable, Text, LongWritable> {
         private LongWritable outval = new LongWritable();
-        private Text outkey = new Text();
         private Long tmp = 0L;
-        Map<String, Long> wcmap = new HashMap<>();
 
         @Override
         protected void reduce(Text key, Iterable<IntWritable> values,
-                              Context context)  {
+                              Context context) throws IOException, InterruptedException {
 
             // 清空前一次的累加记录
             tmp = 0L;
@@ -78,26 +85,13 @@ public class WordCountTop5_Cleanup extends Configured implements Tool {
             for (IntWritable i : values) {
                 tmp += i.get();
             }
-            wcmap.put(key.toString(),tmp);
+            // 进行输出设置
+            outval.set(tmp);
+            context.write(key, outval);
         }
 
-        @Override
-        protected void cleanup(Context context) throws IOException, InterruptedException {
-            //给map排序
-
-            LinkedList<Map.Entry<String, Long>> list = new LinkedList<>(wcmap.entrySet());
-            Collections.sort(list, (o1, o2) -> o2.getValue().compareTo(o1.getValue()));
-
-            //输出前几位
-
-            for (int i = 0; i < 5; i++) {
-                outkey.set(list.get(i).getKey());
-                outval.set(list.get(i).getValue());
-                System.out.println(outkey.toString()+"   "+outval);
-                context.write(outkey, outval);
-            }
-        }
     }
+
 
     //3.配置job
     public int run(String[] args) throws Exception {
@@ -109,6 +103,14 @@ public class WordCountTop5_Cleanup extends Configured implements Tool {
         Path out = new Path(args[1]);
         FileInputFormat.addInputPath(job, in);
         FileOutputFormat.setOutputPath(job, out);
+        //是否开启压缩
+        FileOutputFormat.setCompressOutput(job, true);
+        //设置压缩格式
+        FileOutputFormat.setOutputCompressorClass(job, GzipCodec.class);
+        // 设置map是否启用压缩
+        conf.set(MRJobConfig.MAP_OUTPUT_COMPRESS, "true");
+        // 设置map阶段的压缩算法 Snappy 压缩算法 压缩速度非常快 所以map阶段非常 适合
+        conf.set(MRJobConfig.MAP_OUTPUT_COMPRESS_CODEC, SnappyCodec.class.getName());
 
         //自动删除输出目录
         FileSystem fs = FileSystem.get(conf);
@@ -123,7 +125,7 @@ public class WordCountTop5_Cleanup extends Configured implements Tool {
         job.setReducerClass(MyReducer.class);
 
         //设置要打包的主class （MapReduce所在内部类的容器container类——WordCount）
-        job.setJarByClass(WordCountTop5_Cleanup.class);
+        job.setJarByClass(Compress.class);
 
         //设置Map和Reduce类的输出类型（若相等则只设置Map类即可）
         //Map类输出（Reduce输入类型与之相等）
@@ -138,10 +140,7 @@ public class WordCountTop5_Cleanup extends Configured implements Tool {
         job.setOutputFormatClass(TextOutputFormat.class);
         count = job.waitForCompletion(true) ? 1 : 0;
         /*----------------可选：获取counters-------------*/
-        //获取counters
-        Counters counters = job.getCounters();
-        //获取想要的组
-        CounterGroup counterGroup = counters.getGroup("line_info");
+        Common.getCountOut(job);
 
         /*-------------------------------------*/
         //返回值
@@ -155,12 +154,10 @@ public class WordCountTop5_Cleanup extends Configured implements Tool {
     public static void main(String[] args) {
         try {
             Date start = new Date();
-            int result = ToolRunner.run(new WordCountTop5_Cleanup(), args);
+            int result = ToolRunner.run(new Compress(), args);
             Common.setResult(start, result);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-
-
 }
