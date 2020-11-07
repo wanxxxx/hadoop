@@ -1,6 +1,5 @@
 package com.hnxy.mr;
 
-import org.apache.commons.collections.IteratorUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -9,7 +8,6 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.*;
-import org.apache.hadoop.mapreduce.counters.AbstractCounters;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -18,10 +16,8 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.List;
 import java.util.regex.Pattern;
 
 import static java.lang.Integer.parseInt;
@@ -84,9 +80,9 @@ public class Census extends Configured implements Tool {
                               Context context) throws IOException, InterruptedException {
 
             context.write(key, outval);
-            System.out.printf("户籍为" + key + "的居民编号有：");
+            System.out.print("户籍为" + key + "的居民编号有：");
             for (IntWritable i : values) {
-                System.out.print(i.get()+" ");
+                System.out.print(i.get() + " ");
             }
             System.out.println();
 
@@ -130,20 +126,7 @@ public class Census extends Configured implements Tool {
         job.setOutputFormatClass(TextOutputFormat.class);
         count = job.waitForCompletion(true) ? 1 : 0;
         /*----------------可选：获取counters-------------*/
-
-
-        //获取counters
-        Counters counters = job.getCounters();
-        //获取想要的组
-        CounterGroup counterGroup = counters.getGroup("居民信息");
-        //输出所有counter
-        for (CounterGroup cg : counters) {
-            System.out.println("\t" + cg.getDisplayName());
-            for (Counter c : cg) {
-                System.out.println("\t\t" + c.getDisplayName() + "=" + c.getValue());
-
-            }
-        }
+        Common.getCountOut(job);
         /*-------------------------------------*/
         //返回值
 
@@ -157,11 +140,7 @@ public class Census extends Configured implements Tool {
         try {
             Date start = new Date();
             int result = ToolRunner.run(new Census(), args);
-            Date end = new Date();
-            String msg = result == 1 ? "Job OK" : "JOB FAIL";
-            System.out.println("Time spent " + (end.getTime() - start.getTime()) + " ms");
-            System.out.println(msg);
-            System.exit(result);
+            Common.setResult(start, result);
         } catch (Exception e) {
             e.printStackTrace();
         }

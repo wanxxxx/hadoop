@@ -1,5 +1,6 @@
 package com.hnxy.mr;
 
+import org.apache.commons.collections.IteratorUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -16,9 +17,10 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Date;
 
-public class WordCount extends Configured implements Tool {
+public class WordCount_Combiner extends Configured implements Tool {
 
     /*********************先配置**********************/
     //1.配置自己的map
@@ -36,7 +38,7 @@ public class WordCount extends Configured implements Tool {
         //value——一行数据
         //context——从map到reduce的上下文对象*/
         @Override
-        protected void map(LongWritable key, Text value, Mapper<LongWritable, Text, Text, IntWritable>.Context context) throws IOException, InterruptedException {
+        protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             //拆分value
             //若文件为GBK编码，通过以下方法处理不会乱码（因为mr默认是UTF-8编码）
             tmpvalue = new String(value.getBytes(), 0, value.getLength(), "GBK");
@@ -61,6 +63,28 @@ public class WordCount extends Configured implements Tool {
 
 
     }
+    //Combiner
+
+    private static class MyCombiner extends Reducer<Text, IntWritable, Text, IntWritable> {
+        private IntWritable outval = new IntWritable();
+        private Integer tmp = 0;
+
+        @Override
+        protected void reduce(Text key, Iterable<IntWritable> values,
+                              Context context) throws IOException, InterruptedException {
+
+            // 清空前一次的累加记录
+            tmp = 0;
+            // 循环当前的数据
+            for (IntWritable i : values) {
+                tmp += i.get();
+            }
+            // 进行输出设置
+            outval.set(tmp);
+            context.write(key, outval);
+        }
+
+    }
 
     //2.配置自己的reduce
     /*输入：map的输出*/
@@ -71,8 +95,11 @@ public class WordCount extends Configured implements Tool {
 
         @Override
         protected void reduce(Text key, Iterable<IntWritable> values,
-                              Reducer<Text, IntWritable, Text, LongWritable>.Context context) throws IOException, InterruptedException {
+                              Context context) throws IOException, InterruptedException {
 
+            /*System.out.printf(key + " :"  );
+            values.iterator().forEachRemaining(e -> System.out.printf(e+" "));
+            System.out.println();*/
             // 清空前一次的累加记录
             tmp = 0L;
             // 循环当前的数据
@@ -91,7 +118,8 @@ public class WordCount extends Configured implements Tool {
     public int run(String[] args) throws Exception {
         int count = -1;
         Configuration conf = this.getConf();
-        Job job = Job.getInstance(conf, "wc");
+        Job job = Job.getInstance(conf, "wc2");
+
         //设置输入输出目录
         Path in = new Path(args[0]);
         Path out = new Path(args[1]);
@@ -108,10 +136,11 @@ public class WordCount extends Configured implements Tool {
 
         //设置MR类
         job.setMapperClass(MyMapper.class);
+        job.setCombinerClass(MyCombiner.class);
         job.setReducerClass(MyReducer.class);
 
         //设置要打包的主class （MapReduce所在内部类的容器container类——WordCount）
-        job.setJarByClass(WordCount.class);
+        job.setJarByClass(WordCount_Combiner.class);
 
         //设置Map和Reduce类的输出类型（若相等则只设置Map类即可）
         //Map类输出（Reduce输入类型与之相等）
@@ -126,9 +155,7 @@ public class WordCount extends Configured implements Tool {
         job.setOutputFormatClass(TextOutputFormat.class);
         count = job.waitForCompletion(true) ? 1 : 0;
         /*----------------可选：获取counters-------------*/
-        Common.getCountOut(job);
 
-        /*-------------------------------------*/
         //返回值
 
         return count;
@@ -140,7 +167,7 @@ public class WordCount extends Configured implements Tool {
     public static void main(String[] args) {
         try {
             Date start = new Date();
-            int result = ToolRunner.run(new WordCount(), args);
+            int result = ToolRunner.run(new WordCount_Combiner(), args);
             Common.setResult(start, result);
         } catch (Exception e) {
             e.printStackTrace();
