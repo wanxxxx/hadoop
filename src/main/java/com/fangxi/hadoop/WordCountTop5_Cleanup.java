@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.util.*;
 
 public class WordCountTop5_Cleanup extends Configured implements Tool {
-
     /*********************先配置**********************/
     //1.配置自己的map
     /*输入：LongWirtable——偏移量，Text——每行的数据*/
@@ -87,7 +86,6 @@ public class WordCountTop5_Cleanup extends Configured implements Tool {
 
             LinkedList<Map.Entry<String, Long>> list = new LinkedList<>(wcmap.entrySet());
             Collections.sort(list, (o1, o2) -> o2.getValue().compareTo(o1.getValue()));
-
             //输出前几位
 
             for (int i = 0; i < 5; i++) {

@@ -5,7 +5,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.MedicineWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -21,11 +21,11 @@ import java.io.IOException;
 import java.util.Date;
 
 public class MaxVal1 extends Configured implements Tool {
-    private static class MyMapper extends Mapper<LongWritable, Text, Text, DoubleWritable> {
+    private static class MyMapper extends Mapper<LongWritable, Text, Text, MedicineWritable> {
         /*在map函数外定义需要用到的变量
          * 内存的使用是编写MapReduce程序时唯一要关心的问题，一定要严格控制内存使用*/
         private Text outkey = new Text();
-        private DoubleWritable outval = new DoubleWritable();
+        private MedicineWritable outval = new MedicineWritable();
         private String[] tmp = null;
         private String maxname = null;
         private String tmpname = null;
@@ -55,20 +55,20 @@ public class MaxVal1 extends Configured implements Tool {
         @Override
         protected void cleanup(Context context) throws IOException, InterruptedException {
             System.out.println(maxname + maxval);
-            context.write(new Text(maxname), new DoubleWritable(maxval));
+            context.write(new Text(maxname), new MedicineWritable(maxval));
         }
     }
 
     //2.配置自己的reduce
     /*输入：map的输出*/
     /*输出：合并后的数量可能很大，所以用Long类型*/
-    private static class MyReducer extends Reducer<Text, DoubleWritable, Text, DoubleWritable> {
+    private static class MyReducer extends Reducer<Text, MedicineWritable, Text, MedicineWritable> {
         private String maxname = null;
         private Double maxval = null;
         private Double tmpval = null;
 
         @Override
-        protected void reduce(Text key, Iterable<DoubleWritable> value, Context context) throws IOException, InterruptedException {
+        protected void reduce(Text key, Iterable<MedicineWritable> value, Context context) throws IOException, InterruptedException {
             tmpval = value.iterator().next().get();
             if (maxval == null && maxname == null || maxval < tmpval) {
                 maxval = tmpval;
@@ -80,7 +80,7 @@ public class MaxVal1 extends Configured implements Tool {
         @Override
         protected void cleanup(Reducer.Context context) throws IOException, InterruptedException {
             System.out.println(maxname + maxval);
-            context.write(new Text(maxname), new DoubleWritable(maxval));
+            context.write(new Text(maxname), new MedicineWritable(maxval));
         }
     }
 
@@ -114,10 +114,10 @@ public class MaxVal1 extends Configured implements Tool {
         //设置Map和Reduce类的输出类型（若相等则只设置Map类即可）
         //Map类输出（Reduce输入类型与之相等）
         job.setMapOutputKeyClass(Text.class);
-        job.setMapOutputValueClass(DoubleWritable.class);
+        job.setMapOutputValueClass(MedicineWritable.class);
         //Reduce类输出
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(DoubleWritable.class);
+        job.setOutputValueClass(MedicineWritable.class);
 
         //设置输入输出数据的“格式化”类型
         job.setInputFormatClass(TextInputFormat.class);
