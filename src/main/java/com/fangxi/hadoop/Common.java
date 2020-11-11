@@ -1,9 +1,14 @@
 package com.fangxi.hadoop;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.CounterGroup;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import java.io.IOException;
 import java.util.Date;
@@ -31,5 +36,19 @@ public class Common {
             }
         }
         /*-------------------------------------*/
+    }
+    public static void setInAndOut(Configuration conf,Job job, String[] args) throws IOException{
+        Path in = new Path(args[0]);
+        Path out = new Path(args[1]);
+        FileInputFormat.addInputPath(job, in);
+        FileOutputFormat.setOutputPath(job, out);
+
+        //自动删除输出目录
+        FileSystem fs = FileSystem.get(conf);
+        if (fs.exists(out)) {
+            fs.delete(out, true);
+            System.out.println("Old path has already deleted");
+        }
+
     }
 }

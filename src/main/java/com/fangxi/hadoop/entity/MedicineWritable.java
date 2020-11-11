@@ -3,26 +3,27 @@ package com.fangxi.hadoop.entity;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
 import org.apache.hadoop.io.WritableComparable;
 
 public class MedicineWritable implements WritableComparable<MedicineWritable> {
-    private String date;
-    private int id;
-    private int num;
-    private String name = null;
-    private int saleNum;
+    private String date = "";
+    private String id = "";
+    private String num = "";
+    private String name = "";
+    private Double saleCount = 0D;
     private Double value1 = 0D;
     private Double value2 = 0D;
 
     public MedicineWritable() {
     }
 
-    public MedicineWritable(String date, int id, int num, String name, int saleNum, double value1, double value2) {
+    public MedicineWritable(String date, String id, String num, String name, Double saleCount, Double value1, Double value2) {
         this.date = date;
         this.id = id;
         this.num = num;
         this.name = name;
-        this.saleNum = saleNum;
+        this.saleCount = saleCount;
         this.value1 = value1;
         this.value2 = value2;
     }
@@ -35,19 +36,19 @@ public class MedicineWritable implements WritableComparable<MedicineWritable> {
         this.date = date;
     }
 
-    public int getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(String id) {
         this.id = id;
     }
 
-    public int getNum() {
+    public String getNum() {
         return num;
     }
 
-    public void setNum(int num) {
+    public void setNum(String num) {
         this.num = num;
     }
 
@@ -59,12 +60,12 @@ public class MedicineWritable implements WritableComparable<MedicineWritable> {
         this.name = name;
     }
 
-    public int getSaleNum() {
-        return saleNum;
+    public Double getSaleCount() {
+        return saleCount;
     }
 
-    public void setSaleNum(int saleNum) {
-        this.saleNum = saleNum;
+    public void setSaleCount(Double saleCount) {
+        this.saleCount = saleCount;
     }
 
     public Double getValue1() {
@@ -85,30 +86,46 @@ public class MedicineWritable implements WritableComparable<MedicineWritable> {
 
     @Override
     public void readFields(DataInput in) throws IOException {
-        this.date=in.readUTF();
-        this.id=in.readInt();
-        this.num=in.readInt();
-        this.name=in.readUTF();
-        this.saleNum=in.readInt();
-        this.value1=in.readDouble();
-        this.value2=in.readDouble();
+        this.date = in.readUTF();
+        this.id = in.readUTF();
+        this.num = in.readUTF();
+        this.name = in.readUTF();
+        this.saleCount = in.readDouble();
+        this.value1 = in.readDouble();
+        this.value2 = in.readDouble();
+    }
+
+    @Override
+    public String toString() {
+        return date + "\t" + id + "\t" + num + "\t" + name +
+                "\t" + saleCount + "\t" + value1 + "\t" + value2;
     }
 
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeUTF(this.date);
-        out.writeInt(this.id);
-        out.writeInt(this.num);
+        out.writeUTF(this.id);
+        out.writeUTF(this.num);
         out.writeUTF(this.name);
-        out.writeInt(this.saleNum);
+        out.writeDouble(this.saleCount);
         out.writeDouble(this.value1);
         out.writeDouble(this.value2);
     }
+
 
     public int compareTo(MedicineWritable o) {
         // 按实收金额降序
         return o.getValue2().compareTo(this.getValue2());
     }
 
+    public void changeTo(MedicineWritable o) {
+        this.setDate(o.getDate());
+        this.setId(o.getId());
+        this.setNum(o.getNum());
+        this.setName(o.getName());
+        this.setSaleCount(o.getSaleCount());
+        this.setValue1(o.getValue1());
+        this.setValue2(o.getValue2());
+    }
 }
 
