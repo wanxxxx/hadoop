@@ -5,7 +5,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.io.WritableComparable;
-
+/*自定义Writable类*/
 public class MedicineWritable implements WritableComparable<MedicineWritable> {
     private String date = "";
     private String id = "";
