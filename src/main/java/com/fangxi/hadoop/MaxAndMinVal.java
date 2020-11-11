@@ -60,6 +60,8 @@ public class MaxAndMinVal extends Configured implements Tool {
         private Double maxval = null;
         private Double minval = null;
         private Double tmpval = null;
+        private Text maxkey=new Text("max");
+        private Text minkey=new Text("min");
 
         protected void reduce(Text key, Iterable<MedicineWritable> medicines, Context context) throws IOException, InterruptedException {
             maxval = medicines.iterator().next().getValue2();
@@ -80,8 +82,8 @@ public class MaxAndMinVal extends Configured implements Tool {
             System.out.println("max=" + max.getName() + " : " + max.getValue2());
             System.out.println("min=" + min.getName() + " : " + min.getValue2());
 
-            context.write(new Text("max"), max);
-            context.write(new Text("min"), min);
+            context.write(maxkey, max);
+            context.write(minkey, min);
 
         }
     }
