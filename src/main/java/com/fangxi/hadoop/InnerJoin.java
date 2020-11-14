@@ -51,6 +51,7 @@ public class InnerJoin extends Configured implements Tool {
         private AreaIfoWritable tmp = null;
         private String areaOfList = null;
 
+        @Override
         protected void reduce(Text key, Iterable<AreaIfoWritable> values, Context context) throws IOException, InterruptedException {
             list.clear();
             areaOfList = null;
@@ -81,6 +82,7 @@ public class InnerJoin extends Configured implements Tool {
 
 
     //3.配置job
+    @Override
     public int run(String[] args) throws Exception {
         int count = -1;
         Configuration conf = this.getConf();
