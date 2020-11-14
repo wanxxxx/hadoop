@@ -88,7 +88,7 @@ public class InnerJoin extends Configured implements Tool {
         Configuration conf = this.getConf();
         Job job = Job.getInstance(conf, "wc");
         //设置输入输出目录
-        Common.setInAndOut(conf, job, args);
+        Common.setSome(conf, job, args);
 
 
         //设置MR类

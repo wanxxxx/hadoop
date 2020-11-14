@@ -8,7 +8,9 @@ import org.apache.hadoop.mapreduce.CounterGroup;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 import java.io.IOException;
 import java.util.Date;
@@ -37,7 +39,7 @@ public class Common {
         }
         /*-------------------------------------*/
     }
-    public static void setInAndOut(Configuration conf,Job job, String[] args) throws IOException{
+    public static void setSome(Configuration conf,Job job, String[] args) throws IOException{
         Path in = new Path(args[0]);
         Path out = new Path(args[1]);
         FileInputFormat.addInputPath(job, in);
@@ -49,6 +51,8 @@ public class Common {
             fs.delete(out, true);
             System.out.println("Old path has already deleted");
         }
+        job.setInputFormatClass(TextInputFormat.class);
+        job.setOutputFormatClass(TextOutputFormat.class);
 
     }
 }

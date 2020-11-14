@@ -60,8 +60,8 @@ public class MaxAndMinVal extends Configured implements Tool {
         private Double maxval = null;
         private Double minval = null;
         private Double tmpval = null;
-        private Text maxkey=new Text("max");
-        private Text minkey=new Text("min");
+        private Text maxkey = new Text("max");
+        private Text minkey = new Text("min");
 
         protected void reduce(Text key, Iterable<MedicineWritable> medicines, Context context) throws IOException, InterruptedException {
             maxval = medicines.iterator().next().getValue2();
@@ -126,7 +126,7 @@ public class MaxAndMinVal extends Configured implements Tool {
             }
             System.out.println(key.toString() + "=" + outval.getName() + " : " + outval.getValue2());
             //多目录输出结果文件
-            outputs.write(key, outval, key.toString()+"/");
+            outputs.write(key, outval, key.toString() + "/");
 
             context.write(key, outval);
 
@@ -139,13 +139,16 @@ public class MaxAndMinVal extends Configured implements Tool {
     }
 
 
+
     //3.配置job
+    @Override
+
     public int run(String[] args) throws Exception {
         int count = -1;
         Configuration conf = this.getConf();
         Job job = Job.getInstance(conf, "wc");
         //设置输入输出目录
-        Common.setInAndOut(conf, job, args);
+        Common.setSome(conf, job, args);
 
 
         //设置MR类

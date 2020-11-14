@@ -47,7 +47,8 @@ public class Census extends Configured implements Tool {
 
             tmp = tmpvalue.split(" ");
             /*判断第一列是否为数字*/
-            Pattern pattern = Pattern.compile("[0-9]*");
+            String regex = "[0-9]*";
+            Pattern pattern = Pattern.compile(regex);
             /*判断第2 3 列是否为汉字*/
             String reg = "[\\u4e00-\\u9fa5]+";
 
@@ -90,6 +91,7 @@ public class Census extends Configured implements Tool {
     }
 
     //3.配置job
+    @Override
     public int run(String[] args) throws Exception {
         int count = -1;
         Configuration conf = this.getConf();
