@@ -1,19 +1,16 @@
-package com.fangxi.hadoop;
+package com.fangxi.hadoop.dataskew;
 
-import com.fangxi.hadoop.entity.AccountWritable;
-import com.fangxi.hadoop.util.SecondSortComparator;
-import com.fangxi.hadoop.util.SecondSortGroupByComparator;
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -21,46 +18,42 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import java.io.IOException;
+import com.fangxi.hadoop.entity.StudentInfoWritable;
 
 /**
- * 需求 : 根据用户名通过Partitier进行散列分区,
- * 如果用户名相同的情况下，通过自定义的Comparator按照消费金额进行二次倒序排序
+ * 避免数据倾斜
+ * 自定义的Writable为outval
+ * 设置一个index给输入的数据编号，为outval
+ * 根据整数的排序方式就可以平分到4个reduce里了
+ * 缺点：index影响了正常业务输出
  */
-public class SecondSort extends Configured implements Tool {
+public class StudentExamMR_index extends Configured implements Tool {
 
 
     // 从默认的key val 整理自己key val
-    private static class MyMapper extends Mapper<LongWritable, Text, AccountWritable, NullWritable> {
+    private static class MyMapper extends Mapper<LongWritable, Text, IntWritable, StudentInfoWritable>{
 
-        private AccountWritable outkey = new AccountWritable();
-        private NullWritable outval = NullWritable.get();
+        // 定义map需要用到的变量
+        private StudentInfoWritable outval = new StudentInfoWritable();
+        private IntWritable outkey = new IntWritable();
         private String[] strs = null;
+        private Integer index = 0;
 
         @Override
-        protected void map(LongWritable key, Text value, Context context)
+        protected void map(LongWritable key, Text value,
+                           Mapper<LongWritable, Text, IntWritable, StudentInfoWritable>.Context context)
                 throws IOException, InterruptedException {
             // 拆分数据
-            strs = value.toString().split(" ");
-            if (strs != null && strs.length == 2) {
-                outkey.setName(strs[0]);
-                outkey.setCost(Integer.parseInt(strs[strs.length - 1]));
-            }
+            strs = value.toString().split("\t");
+            outkey.set(++index);
+            // 索引为 1 和 最后一个数据
+            outval.setName(strs[1]);
+            outval.setScore(Integer.parseInt(strs[strs.length-1]));
             context.write(outkey, outval);
         }
     }
 
-    private static class MyPartitioner extends Partitioner<AccountWritable, NullWritable> {
-        @Override
-        public int getPartition(AccountWritable key, NullWritable value, int numPartitions) {
-            //根据名字进行散列分区
-            int a= (key.getName().hashCode() & Integer.MAX_VALUE)%numPartitions;
-            System.out.println("key.getName().hashCode() & Integer.MAX_VALUE)%numPartitions");
-            System.out.println(key.getName()+":"+key.getName().hashCode()+"&"+Integer.MAX_VALUE+"  %"+numPartitions);
-            System.out.println((key.getName().hashCode() & Integer.MAX_VALUE)+"%"+numPartitions+" ="+a);
-            return a;
-        }
-    }
+
 
     @Override
     public int run(String[] args) throws Exception {
@@ -90,16 +83,12 @@ public class SecondSort extends Configured implements Tool {
 
 
         // 第二阶段 : 设置MRCJ类
-        job.setMapperClass(MyMapper.class);
-        job.setPartitionerClass(MyPartitioner.class);
-        job.setMapOutputKeyClass(AccountWritable.class);
-        job.setMapOutputValueClass(NullWritable.class);
 
-        //设置分组规则
-        job.setGroupingComparatorClass(SecondSortGroupByComparator.class);
-        //设置组内排序（即二次排序）
-        job.setSortComparatorClass(SecondSortComparator.class);
-        job.setNumReduceTasks(2);
+
+        job.setMapperClass(MyMapper.class);
+        job.setMapOutputKeyClass(IntWritable.class);
+        job.setMapOutputValueClass(StudentInfoWritable.class);
+        job.setNumReduceTasks(4);
 
 
         // 第三阶段 : 提交job
@@ -111,13 +100,14 @@ public class SecondSort extends Configured implements Tool {
     public static void main(String[] args) {
         try {
             // 调用run
-            int count = ToolRunner.run(new SecondSort(), args);
+            int count = ToolRunner.run(new StudentExamMR_index(), args);
             System.out.println(count == 0 ? "JOB OK!" : "JOB FAIL!");
             System.exit(count);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
 
 
 }

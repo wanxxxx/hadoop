@@ -66,6 +66,7 @@ public class RmDup extends Configured implements Tool {
 
 
     //3.配置job
+    @Override
     public int run(String[] args) throws Exception {
         int count = -1;
         Configuration conf = this.getConf();

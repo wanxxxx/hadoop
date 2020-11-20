@@ -8,19 +8,14 @@ import java.io.IOException;
 
 public class AccountWritable implements WritableComparable<AccountWritable> {
     private String name;
-    private Integer score;
+    private Integer cost;
 
     public AccountWritable() {
     }
 
-    public AccountWritable(String name, Integer score) {
+    public AccountWritable(String name, Integer cost) {
         this.name = name;
-        this.score = score;
-    }
-
-    @Override
-    public String toString() {
-        return name + " " + score;
+        this.cost = cost;
     }
 
     public String getName() {
@@ -31,35 +26,34 @@ public class AccountWritable implements WritableComparable<AccountWritable> {
         this.name = name;
     }
 
-    public Integer getScore() {
-        return score;
+    public Integer getCost() {
+        return cost;
     }
 
-    public void setScore(Integer score) {
-        this.score = score;
+    public void setCost(Integer cost) {
+        this.cost = cost;
+    }
+
+    @Override
+    public String toString() {
+        return name + "  " + cost;
     }
 
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeUTF(name);
-        out.writeInt(score);
+        out.writeInt(cost);
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
         this.name = in.readUTF();
-        this.score = in.readInt();
+        this.cost = in.readInt();
     }
 
     @Override
     public int compareTo(AccountWritable o) {
-        //降序
-        if (this.getScore() < o.getScore()) {
-            return 1;
-        } else if (this.getScore().equals(o.getScore())) {
-            return 0;
-        } else {
-            return -1;
-        }
+        //第一次排序根据用户名进行正序排序
+        return o.getName().compareTo(o.getName());
     }
 }

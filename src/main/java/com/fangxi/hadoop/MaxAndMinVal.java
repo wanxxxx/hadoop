@@ -63,6 +63,7 @@ public class MaxAndMinVal extends Configured implements Tool {
         private Text maxkey = new Text("max");
         private Text minkey = new Text("min");
 
+        @Override
         protected void reduce(Text key, Iterable<MedicineWritable> medicines, Context context) throws IOException, InterruptedException {
             maxval = medicines.iterator().next().getValue2();
             minval = maxval;

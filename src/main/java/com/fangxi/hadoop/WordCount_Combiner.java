@@ -81,6 +81,7 @@ public class WordCount_Combiner extends Configured implements Tool {
             // 进行输出设置
             outval.set(tmp);
             context.write(key, outval);
+            System.out.println(key.toString()+" "+outval.toString());
         }
 
     }
@@ -108,12 +109,14 @@ public class WordCount_Combiner extends Configured implements Tool {
             // 进行输出设置
             outval.set(tmp);
             context.write(key, outval);
+            System.out.println(key.toString()+" "+outval.toString());
         }
 
     }
 
 
     //3.配置job
+    @Override
     public int run(String[] args) throws Exception {
         int count = -1;
         Configuration conf = this.getConf();
