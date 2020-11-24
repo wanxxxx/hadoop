@@ -1,5 +1,6 @@
-package com.fangxi.hadoop;
+package com.fangxi.hadoop.sort;
 
+import com.fangxi.hadoop.Common;
 import com.fangxi.hadoop.util.DescSortComparator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;

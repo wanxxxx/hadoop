@@ -17,7 +17,8 @@ import org.apache.hadoop.util.ToolRunner;
 
 import java.io.IOException;
 import java.util.*;
-
+/**去重
+* */
 public class RmDup extends Configured implements Tool {
 
     /*********************先配置**********************/
