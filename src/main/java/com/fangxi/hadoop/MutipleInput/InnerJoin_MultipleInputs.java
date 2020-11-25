@@ -1,4 +1,4 @@
-package com.fangxi.hadoop.join;
+package com.fangxi.hadoop.MutipleInput;
 
 import com.fangxi.hadoop.Common;
 import com.fangxi.hadoop.entity.AreaIfoWritable;

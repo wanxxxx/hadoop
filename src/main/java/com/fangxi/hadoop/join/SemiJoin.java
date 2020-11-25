@@ -38,7 +38,7 @@ public class SemiJoin extends Configured implements Tool {
         @Override
         protected void setup(Context context) throws IOException, InterruptedException {
             URI[] cacheFiles = context.getCacheFiles();
-            String path = cacheFiles[0].getPath().toString();
+            String path = cacheFiles[0].getPath();
             String filename = path.substring(path.lastIndexOf("/") + 1);
             System.out.println(filename);
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(filename), "UTF-8"));

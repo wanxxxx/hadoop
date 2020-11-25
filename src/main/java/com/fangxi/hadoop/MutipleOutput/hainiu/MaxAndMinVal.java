@@ -1,21 +1,19 @@
-package com.fangxi.hadoop;
+package com.fangxi.hadoop.MutipleOutput.hainiu;
 
+import com.fangxi.hadoop.Common;
 import com.fangxi.hadoop.entity.MedicineWritable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
+import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -148,10 +146,23 @@ public class MaxAndMinVal extends Configured implements Tool {
         int count = -1;
         Configuration conf = this.getConf();
         Job job = Job.getInstance(conf, "wc");
+
+        //设置输入输出数据的“格式化”类型
+        job.setInputFormatClass(TextInputFormat.class);
+        job.setOutputFormatClass(TextOutputFormat.class);
+
+
         //设置输入输出目录
-        Common.setSome(conf, job, args);
-
-
+        Path in = new Path("file:///D:\\1\\input\\MutipleOutput");
+        Path out = new Path("file:///D:\\1\\out");
+        TextInputFormat.addInputPath(job, in);
+        SequenceFileOutputFormat.setOutputPath(job, out);
+        //自动删除输出目录
+        FileSystem fs = FileSystem.get(conf);
+        if (fs.exists(out)) {
+            fs.delete(out, true);
+            System.out.println("Old path has already deleted");
+        }
         //设置MR类
         job.setMapperClass(MyMapper.class);
         job.setCombinerClass(MyCombiner.class);
@@ -166,9 +177,6 @@ public class MaxAndMinVal extends Configured implements Tool {
         job.setMapOutputValueClass(MedicineWritable.class);
 
 
-        //设置输入输出数据的“格式化”类型
-        job.setInputFormatClass(TextInputFormat.class);
-        job.setOutputFormatClass(TextOutputFormat.class);
         count = job.waitForCompletion(true) ? 1 : 0;
         /*----------------可选：获取counters-------------*/
         //Common.getCountOut(job);

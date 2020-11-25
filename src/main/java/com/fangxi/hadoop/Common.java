@@ -40,8 +40,8 @@ public class Common {
         /*-------------------------------------*/
     }
     public static void setSome(Configuration conf,Job job, String[] args) throws IOException{
-        Path in = new Path(args[0]);
-        Path out = new Path(args[1]);
+        Path in = new Path("file:///D:\\1\\input\\CombinLittleFile");
+        Path out = new Path("file:///D:1\\out");
         FileInputFormat.addInputPath(job, in);
         FileOutputFormat.setOutputPath(job, out);
 
